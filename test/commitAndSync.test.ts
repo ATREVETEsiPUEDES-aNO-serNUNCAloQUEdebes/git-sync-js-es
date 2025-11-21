@@ -1,12 +1,12 @@
-import { omit } from 'lodash';
 import { exec } from 'dugite';
+import { omit } from 'lodash';
 import { commitAndSync, ICommitAndSyncOptions } from '../src/commitAndSync';
 import { defaultGitInfo } from '../src/defaultGitInfo';
 import { GitPullPushError } from '../src/errors';
 import { getRemoteUrl, getSyncState, SyncState } from '../src/inspect';
+import { toGitStringResult } from '../src/utils';
 import { creatorGitInfo, dir, exampleToken, upstreamDir } from './constants';
 import { addSomeFiles } from './utils';
-import { toGitStringResult } from '../src/utils';
 
 describe('commitAndSync', () => {
   const getCommitAndSyncOptions = (): ICommitAndSyncOptions => ({
@@ -50,15 +50,15 @@ fatal: Authentication failed for 'https://github.com/linonetwo/wiki/'
     // Add some files and commit
     await addSomeFiles();
     await commitAndSync(getCommitAndSyncOptions());
-    
+
     // Verify that both author and committer are set correctly
     const logResult = toGitStringResult(
       await exec(['log', '--format=%an|%ae|%cn|%ce', '-1'], dir),
     );
-    
+
     expect(logResult.exitCode).toBe(0);
     const [authorName, authorEmail, committerName, committerEmail] = logResult.stdout.trim().split('|');
-    
+
     // Both author and committer should be set to the same user info
     expect(authorName).toBe(defaultGitInfo.gitUserName);
     expect(authorEmail).toBe(defaultGitInfo.email);

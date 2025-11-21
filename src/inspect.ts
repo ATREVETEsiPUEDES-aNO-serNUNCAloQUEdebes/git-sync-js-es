@@ -73,7 +73,7 @@ export async function getRemoteUrl(dir: string, remoteName: string): Promise<str
   if (result.exitCode === 0 && result.stdout.trim().length > 0) {
     return result.stdout.trim();
   }
-  
+
   // Fallback: try to get the first remote if the specified one doesn't exist
   const remotesResult = toGitStringResult(await exec(['remote'], dir));
   if (remotesResult.exitCode === 0) {
@@ -86,7 +86,7 @@ export async function getRemoteUrl(dir: string, remoteName: string): Promise<str
       }
     }
   }
-  
+
   return '';
 }
 
@@ -342,4 +342,103 @@ export async function getRemoteName(dir: string, branch: string): Promise<string
     return stdout.trim();
   }
   return 'origin';
+}
+
+/**
+ * Check if there are stale git lock files and optionally remove them.
+ * Lock files can be left behind if git operations are interrupted.
+ *
+ * @param dir The git repository directory
+ * @param logger Optional logger for debugging
+ * @returns Array of lock file paths that were found
+ */
+export async function checkGitLockFiles(dir: string, logger?: ILogger): Promise<string[]> {
+  const logDebug = (message: string): unknown =>
+    logger?.debug(message, {
+      functionName: 'checkGitLockFiles',
+      step: GitStep.CheckingLocalGitRepoSanity,
+      dir,
+    });
+
+  try {
+    const gitDir = await getGitDirectory(dir);
+    const lockFiles = [
+      path.join(gitDir, 'index.lock'),
+      path.join(gitDir, 'HEAD.lock'),
+      path.join(gitDir, 'refs', 'heads', '*.lock'),
+      path.join(gitDir, 'refs', 'remotes', '*.lock'),
+    ];
+
+    const foundLockFiles: string[] = [];
+
+    for (const lockPattern of lockFiles) {
+      if (lockPattern.includes('*')) {
+        // Handle wildcard patterns - check parent directory
+        const parentDir = path.dirname(lockPattern);
+        if (await fs.pathExists(parentDir)) {
+          const files = await fs.readdir(parentDir);
+          for (const file of files) {
+            if (file.endsWith('.lock')) {
+              const fullPath = path.join(parentDir, file);
+              foundLockFiles.push(fullPath);
+              logDebug(`Found lock file: ${fullPath}`);
+            }
+          }
+        }
+      } else {
+        // Direct path check
+        if (await fs.pathExists(lockPattern)) {
+          foundLockFiles.push(lockPattern);
+          logDebug(`Found lock file: ${lockPattern}`);
+        }
+      }
+    }
+
+    return foundLockFiles;
+  } catch (error) {
+    logDebug(`Error checking lock files: ${(error as Error).message}`);
+    return [];
+  }
+}
+
+/**
+ * Remove stale git lock files that may block git operations.
+ * This should only be called when you're sure no other git operations are running.
+ *
+ * @param dir The git repository directory
+ * @param logger Optional logger for debugging
+ * @returns Number of lock files removed
+ */
+export async function removeGitLockFiles(dir: string, logger?: ILogger): Promise<number> {
+  const logDebug = (message: string): unknown =>
+    logger?.debug(message, {
+      functionName: 'removeGitLockFiles',
+      step: GitStep.CheckingLocalGitRepoSanity,
+      dir,
+    });
+  const logWarn = (message: string): unknown =>
+    logger?.warn?.(message, {
+      functionName: 'removeGitLockFiles',
+      step: GitStep.CheckingLocalGitRepoSanity,
+      dir,
+    });
+
+  const lockFiles = await checkGitLockFiles(dir, logger);
+  let removedCount = 0;
+
+  for (const lockFile of lockFiles) {
+    try {
+      await fs.remove(lockFile);
+      removedCount++;
+      logWarn(`Removed stale lock file: ${lockFile}`);
+    } catch (error) {
+      logDebug(`Failed to remove lock file ${lockFile}: ${(error as Error).message}`);
+    }
+  }
+
+  if (removedCount > 0) {
+    logWarn(`Removed ${removedCount} stale git lock file(s)`);
+  }
+
+  return removedCount;
 }

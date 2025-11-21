@@ -2,7 +2,7 @@ import { exec } from 'dugite';
 import { credentialOff, credentialOn } from './credential';
 import { defaultGitInfo as defaultDefaultGitInfo } from './defaultGitInfo';
 import { CantSyncGitNotInitializedError, GitPullPushError, SyncParameterMissingError } from './errors';
-import { assumeSync, getDefaultBranchName, getGitRepositoryState, getRemoteName, getSyncState, haveLocalChanges } from './inspect';
+import { assumeSync, getDefaultBranchName, getGitRepositoryState, getRemoteName, getSyncState, haveLocalChanges, removeGitLockFiles } from './inspect';
 import { GitStep, IGitUserInfos, ILogger } from './interface';
 import { commitFiles, continueRebase, fetchRemote, mergeUpstream, pushUpstream } from './sync';
 import { toGitStringResult } from './utils';
@@ -209,6 +209,12 @@ export async function syncPreflightCheck(configs: {
 }) {
   const { dir, logger, logProgress, logDebug, defaultGitInfo = defaultDefaultGitInfo, userInfo } = configs;
   const { gitUserName, email } = userInfo ?? defaultGitInfo;
+
+  // Check and remove stale lock files before any git operations
+  const removedLockFiles = await removeGitLockFiles(dir, logger);
+  if (removedLockFiles > 0) {
+    logDebug?.(`Removed ${removedLockFiles} stale git lock file(s) before sync`, GitStep.PrepareSync);
+  }
 
   const repoStartingState = await getGitRepositoryState(dir, logger);
   if (repoStartingState.length === 0 || repoStartingState === '|DIRTY') {

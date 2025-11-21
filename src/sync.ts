@@ -37,28 +37,31 @@ export async function commitFiles(
   logDebug(`Executing: git add . in ${dir}`, GitStep.AddingFiles);
   const addResult = toGitStringResult(await exec(['add', '.'], dir));
   logDebug(`git add exitCode: ${addResult.exitCode}, stdout: ${addResult.stdout || '(empty)'}, stderr: ${addResult.stderr || '(empty)'}`, GitStep.AddingFiles);
-  
+
   // Check what's actually in the staging area
   const statusResult = toGitStringResult(await exec(['status', '--porcelain'], dir));
   logDebug(`git status --porcelain: ${statusResult.stdout || '(empty)'}`, GitStep.AddingFiles);
-  
+
   // Check staged files using git diff --cached
   const diffCachedResult = toGitStringResult(await exec(['diff', '--cached', '--name-only'], dir));
   const actualStagedFiles = diffCachedResult.stdout.trim().split('\n').filter(f => f.length > 0);
   logDebug(`Actual staged files count (from git diff --cached): ${actualStagedFiles.length}`, GitStep.AddingFiles);
   if (actualStagedFiles.length > 0) {
-    logDebug(`Actual staged files: ${actualStagedFiles.slice(0, 10).join(', ')}${actualStagedFiles.length > 10 ? ` ... (${actualStagedFiles.length - 10} more)` : ''}`, GitStep.AddingFiles);
+    logDebug(
+      `Actual staged files: ${actualStagedFiles.slice(0, 10).join(', ')}${actualStagedFiles.length > 10 ? ` ... (${actualStagedFiles.length - 10} more)` : ''}`,
+      GitStep.AddingFiles,
+    );
   } else {
     logDebug('No files in staging area after git add!', GitStep.AddingFiles);
   }
-  
+
   // find and unStage files that are in the ignore list
   if (filesToIgnore.length > 0) {
     // Get all tracked files using git ls-files
     const lsFilesResult = toGitStringResult(await exec(['ls-files'], dir));
     const trackedFiles = lsFilesResult.stdout.trim().split('\n').filter(f => f.length > 0);
     logDebug(`Total tracked files count (from git ls-files): ${trackedFiles.length}`, GitStep.AddingFiles);
-    
+
     const stagedFilesToIgnore = filesToIgnore.filter((file) => trackedFiles.includes(file));
     logDebug(`Files to ignore count: ${filesToIgnore.length}, staged files to ignore count: ${stagedFilesToIgnore.length}`, GitStep.AddingFiles);
     if (stagedFilesToIgnore.length > 0) {
@@ -90,13 +93,13 @@ export async function commitFiles(
     ),
   );
   logDebug(`git commit exitCode: ${commitResult.exitCode}, stdout: ${commitResult.stdout || '(empty)'}, stderr: ${commitResult.stderr || '(empty)'}`, GitStep.CommitComplete);
-  
+
   if (commitResult.exitCode === 1 && commitResult.stdout.includes('nothing to commit')) {
     logDebug('Git commit reports "nothing to commit" - this is expected if staging area is empty', GitStep.CommitComplete);
   } else if (commitResult.exitCode === 128 && commitResult.stderr.includes('Committer identity unknown')) {
     logDebug('Git commit failed due to committer identity - this should not happen with env vars set', GitStep.CommitComplete);
   }
-  
+
   return commitResult;
 }
 
