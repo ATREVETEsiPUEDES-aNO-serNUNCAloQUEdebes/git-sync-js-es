@@ -74,7 +74,8 @@ export async function forcePull(options: IForcePullOptions) {
   await credentialOn(dir, remoteUrl, gitUserName, accessToken, remoteName);
   try {
     logProgress(GitStep.StartFetchingFromGithubRemote);
-    await fetchRemote(dir, defaultGitInfo.remote, defaultGitInfo.branch, logger);
+    logDebug(`Fetching from remote ${remoteName} branch ${defaultBranchName}`, GitStep.StartFetchingFromGithubRemote);
+    await fetchRemote(dir, remoteName, defaultBranchName, logger);
     const syncState = await getSyncState(dir, defaultBranchName, remoteName, logger);
     logDebug(`syncState in dir ${dir} is ${syncState}`, GitStep.StartFetchingFromGithubRemote);
     if (syncState === 'equal') {
@@ -83,7 +84,7 @@ export async function forcePull(options: IForcePullOptions) {
       return;
     }
     logProgress(GitStep.StartResettingLocalToRemote);
-    await hardResetLocalToRemote(dir, branch, remoteName);
+    await hardResetLocalToRemote(dir, defaultBranchName, remoteName);
     logProgress(GitStep.FinishForcePull);
   } catch (error) {
     if (error instanceof CantForcePullError) {

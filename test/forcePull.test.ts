@@ -31,4 +31,23 @@ describe('forcePull', () => {
     await forcePull(getForcePullOptions());
     expect(await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote)).toBe<SyncState>('equal');
   });
+
+  test('fetches latest changes before checking sync state', async () => {
+    // This test verifies that forcePull fetches the latest remote state
+    // before checking if local is equal to remote
+
+    // First fetch to know the remote state
+    await fetchRemote(dir, defaultGitInfo.remote, defaultGitInfo.branch);
+
+    // Check initial state (could be behind or diverged depending on local commits)
+    const initialSyncState = await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote);
+    expect(['behind', 'diverged']).toContain(initialSyncState);
+
+    // forcePull should fetch the latest and then reset
+    await forcePull(getForcePullOptions());
+
+    // After forcePull, should be equal to remote
+    const finalSyncState = await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote);
+    expect(finalSyncState).toBe<SyncState>('equal');
+  });
 });
