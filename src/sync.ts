@@ -222,10 +222,12 @@ export async function fetchRemote(dir: string, remoteName: string, branch?: stri
     });
 
   logDebug(`Fetching from ${remoteName}${branch ? ` branch ${branch}` : ' all branches'}`);
+
   if (branch === undefined) {
     await exec(['fetch', remoteName], dir);
   } else {
     await exec(['fetch', remoteName, branch], dir);
   }
+
   logDebug(`Fetch completed from ${remoteName}`);
 }

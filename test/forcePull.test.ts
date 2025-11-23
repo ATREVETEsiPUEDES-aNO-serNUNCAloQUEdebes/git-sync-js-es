@@ -50,4 +50,24 @@ describe('forcePull', () => {
     const finalSyncState = await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote);
     expect(finalSyncState).toBe<SyncState>('equal');
   });
+
+  test('forcePull uses correct remote and branch names (issue #515)', async () => {
+    // This test verifies the fix for issue #515:
+    // forcePull should use the actual remoteName and defaultBranchName
+    // instead of defaultGitInfo.remote and defaultGitInfo.branch
+
+    // repo2 has pushed changes, so we should be behind after fetch
+    await fetchRemote(dir, defaultGitInfo.remote, defaultGitInfo.branch);
+    const syncStateBeforePull = await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote);
+
+    // Should not be equal if repo2 pushed changes
+    expect(syncStateBeforePull).not.toBe<SyncState>('equal');
+
+    // forcePull should correctly fetch and reset
+    await forcePull(getForcePullOptions());
+
+    // After forcePull, should definitely be equal
+    const syncStateAfterPull = await getSyncState(dir, defaultGitInfo.branch, defaultGitInfo.remote);
+    expect(syncStateAfterPull).toBe<SyncState>('equal');
+  });
 });
