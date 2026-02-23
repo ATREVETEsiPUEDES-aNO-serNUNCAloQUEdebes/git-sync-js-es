@@ -162,6 +162,9 @@ export async function commitAndSync(options: ICommitAndSyncOptions): Promise<voi
         } else {
           await continueRebase(dir, gitUserName, email ?? defaultGitInfo.email, logger);
           logProgress(GitStep.RebaseConflictNeedsResolve);
+          // Reset exitCode after successful continueRebase so the post-switch check
+          // does not incorrectly throw GitPullPushError.
+          exitCode = 0;
         }
         await pushUpstream(dir, defaultBranchName, remoteName, userInfo, logger);
         break;
