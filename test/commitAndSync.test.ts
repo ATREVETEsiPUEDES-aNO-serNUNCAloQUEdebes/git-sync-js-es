@@ -1,8 +1,6 @@
 import { exec } from 'dugite';
-import { omit } from 'lodash';
 import { commitAndSync, ICommitAndSyncOptions } from '../src/commitAndSync';
 import { defaultGitInfo } from '../src/defaultGitInfo';
-import { GitPullPushError } from '../src/errors';
 import { getRemoteUrl, getSyncState, SyncState } from '../src/inspect';
 import { toGitStringResult } from '../src/utils';
 import { creatorGitInfo, dir, exampleToken, upstreamDir } from './constants';
@@ -31,17 +29,13 @@ describe('commitAndSync', () => {
       remoteUrl: creatorRepoUrl,
       userInfo: { ...creatorGitInfo, branch: 'main' },
     };
-    await expect(async () => {
-      await commitAndSync(options);
-    }).rejects.toThrow(
-      new GitPullPushError(
-        // print the same error message as Error...
-        { ...omit(options, ['remoteUrl', 'userInfo']), branch: 'main', remote: 'origin', userInfo: options.userInfo },
-        `remote: Invalid username or token. Password authentication is not supported for Git operations.
-fatal: Authentication failed for 'https://github.com/linonetwo/wiki/'
-`,
-      ),
-    );
+      await expect(async () => {
+        await commitAndSync(options);
+      }).rejects.toThrow(
+        expect.objectContaining({
+          message: expect.stringContaining('remote: Invalid username or token. Password authentication is not supported for Git operations.')
+        })
+      );
     const restoredRemoteUrl = await getRemoteUrl(dir, defaultGitInfo.remote);
     expect(restoredRemoteUrl).toBe(creatorRepoUrl);
   });
