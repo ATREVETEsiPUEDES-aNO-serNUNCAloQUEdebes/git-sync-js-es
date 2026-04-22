@@ -3,6 +3,31 @@ import { defaultGitInfo } from '../src/defaultGitInfo';
 import { initGitWithBranch } from '../src/init';
 import { dir, dir2, setGlobalConstants, upstreamDir } from './constants';
 
+async function delay(milliseconds: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function removeWithRetry(targetPath: string): Promise<void> {
+  const attempts = 5;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      await fs.remove(targetPath);
+      return;
+    } catch (error) {
+      lastError = error;
+      const errorCode = (error as NodeJS.ErrnoException).code;
+      if (errorCode !== 'EBUSY' && errorCode !== 'ENOTEMPTY' && errorCode !== 'EPERM') {
+        throw error;
+      }
+      await delay(200 * (attempt + 1));
+    }
+  }
+
+  throw lastError;
+}
+
 beforeEach(async () => {
   setGlobalConstants();
   await resetMockGitRepositories();
@@ -22,9 +47,7 @@ export async function setUpMockGitRepositories() {
 }
 
 export async function resetMockGitRepositories() {
-  await Promise.all([
-    fs.remove(dir),
-    fs.remove(dir2),
-    fs.remove(upstreamDir),
-  ]);
+  for (const targetPath of [dir, dir2, upstreamDir]) {
+    await removeWithRetry(targetPath);
+  }
 }
