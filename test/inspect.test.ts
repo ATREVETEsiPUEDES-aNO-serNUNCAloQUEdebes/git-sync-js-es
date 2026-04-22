@@ -28,6 +28,27 @@ describe('getGitDirectory', () => {
     expect(await hasGit(dir)).toBe(true);
   });
 
+  test('accepts repo detection with benign stderr output', async () => {
+    const originalTrace = process.env.GIT_TRACE;
+    process.env.GIT_TRACE = '1';
+
+    try {
+      expect(await getGitDirectory(dir)).toBe(gitDirectory);
+      expect(await hasGit(dir)).toBe(true);
+    } finally {
+      if (originalTrace === undefined) {
+        delete process.env.GIT_TRACE;
+      } else {
+        process.env.GIT_TRACE = originalTrace;
+      }
+    }
+  });
+
+  test('treats Windows path formatting differences as the same repo root', async () => {
+    const pathWithForwardSlashes = dir.replaceAll('\\', '/');
+    expect(await hasGit(pathWithForwardSlashes)).toBe(true);
+  });
+
   describe('when no git', () => {
     beforeEach(async () => {
       await fs.remove(gitDirectory);

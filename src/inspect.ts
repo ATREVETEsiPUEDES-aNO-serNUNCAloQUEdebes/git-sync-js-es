@@ -286,10 +286,14 @@ export async function getGitDirectory(dir: string, logger?: ILogger): Promise<st
     });
 
   logProgress(GitStep.CheckingLocalGitRepoSanity);
-  const { stdout, stderr } = toGitStringResult(await exec(['rev-parse', '--is-inside-work-tree', dir], dir));
-  if (stderr.length > 0) {
+  const revParseResult = toGitStringResult(await exec(['rev-parse', '--is-inside-work-tree', dir], dir));
+  const { stdout, stderr, exitCode } = revParseResult;
+  if (exitCode !== 0) {
     logDebug(stderr, GitStep.CheckingLocalGitRepoSanity);
     throw new CantSyncGitNotInitializedError(dir);
+  }
+  if (stderr.length > 0) {
+    logDebug(stderr, GitStep.CheckingLocalGitRepoSanity);
   }
   if (stdout.startsWith('true')) {
     const gitDirResult = toGitStringResult(await exec(['rev-parse', '--git-dir', dir], dir));
@@ -303,6 +307,11 @@ export async function getGitDirectory(dir: string, logger?: ILogger): Promise<st
   throw new CantSyncGitNotInitializedError(dir);
 }
 
+function normalizePathForComparison(inputPath: string): string {
+  const resolvedPath = path.resolve(path.normalize(inputPath)).replace(/[\\/]+$/, '');
+  return process.platform === 'win32' ? resolvedPath.toLowerCase() : resolvedPath;
+}
+
 /**
  * Check if dir has `.git`.
  * @param dir folder that may contains a git
@@ -312,7 +321,7 @@ export async function getGitDirectory(dir: string, logger?: ILogger): Promise<st
 export async function hasGit(dir: string, strict = true): Promise<boolean> {
   try {
     const resultDir = await getGitDirectory(dir);
-    if (strict && path.dirname(resultDir) !== dir) {
+    if (strict && normalizePathForComparison(path.dirname(resultDir)) !== normalizePathForComparison(dir)) {
       return false;
     }
   } catch (error) {
