@@ -145,7 +145,7 @@ describe('getRemoteRepoName', () => {
   });
 
   test('Throw when not a url', () => {
-    expect(() => getRemoteRepoName('sdfasdf/asdfadsf')).toThrow(new TypeError('Invalid URL'));
+    expect(() => getRemoteRepoName('sdfasdf/asdfadsf')).toThrow('Invalid URL');
   });
 });
 

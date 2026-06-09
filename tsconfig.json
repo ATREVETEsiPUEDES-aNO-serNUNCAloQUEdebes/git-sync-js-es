@@ -6,6 +6,7 @@
     "module": "ESNext",
     "lib": ["ESNext"],
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,

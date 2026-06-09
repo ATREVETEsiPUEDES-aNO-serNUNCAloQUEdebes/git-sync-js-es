@@ -29,13 +29,13 @@ describe('commitAndSync', () => {
       remoteUrl: creatorRepoUrl,
       userInfo: { ...creatorGitInfo, branch: 'main' },
     };
-      await expect(async () => {
-        await commitAndSync(options);
-      }).rejects.toThrow(
-        expect.objectContaining({
-          message: expect.stringContaining('remote: Invalid username or token. Password authentication is not supported for Git operations.')
-        })
-      );
+    await expect(async () => {
+      await commitAndSync(options);
+    }).rejects.toThrow(
+      expect.objectContaining({
+        message: expect.stringContaining('remote: Invalid username or token. Password authentication is not supported for Git operations.'),
+      }),
+    );
     const restoredRemoteUrl = await getRemoteUrl(dir, defaultGitInfo.remote);
     expect(restoredRemoteUrl).toBe(creatorRepoUrl);
   });
