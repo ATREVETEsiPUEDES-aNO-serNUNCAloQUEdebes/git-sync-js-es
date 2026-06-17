@@ -100,13 +100,13 @@ describe('getModifiedFileList', () => {
   });
 
   test('list multiple CJK file names', async () => {
-    const paths: [string, string] = [path.join(dir, '试试啊.json'), path.join(dir, '一个破图片.png')];
+    const paths: [string, string] = [path.join(dir, 'Pruebalo.json'), path.join(dir, 'Una imagen rota.png')];
     await fs.writeJSON(paths[0], { test: 'test' });
     await fs.writeFile(paths[1], exampleImageBuffer);
     const fileList = await getModifiedFileList(dir);
     expect(fileList).toStrictEqual([
-      { filePath: paths[0], fileRelativePath: '试试啊.json', type: '??' },
-      { filePath: paths[1], fileRelativePath: '一个破图片.png', type: '??' },
+      { filePath: paths[0], fileRelativePath: 'Pruebalo.json', type: '??' },
+      { filePath: paths[1], fileRelativePath: 'Una imagen rota.png', type: '??' },
     ]);
   });
 });
